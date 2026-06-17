@@ -1,7 +1,13 @@
+@import url('https://fonts.googleapis.com/css2?family=Jua&display=swap');
+
+/* ─────────────────────────────────────────
+   RESET & BASE
+───────────────────────────────────────── */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  font-family: 'Jua', sans-serif;
 }
 
 html, body, #root {
@@ -10,6 +16,9 @@ html, body, #root {
   overflow: hidden;
 }
 
+/* ─────────────────────────────────────────
+   APP LAYOUT
+───────────────────────────────────────── */
 .app {
   width: 100vw;
   height: 100vh;
@@ -18,16 +27,58 @@ html, body, #root {
   background-color: #FFF4EB;
 }
 
-.bulletin-board {
+/* ─────────────────────────────────────────
+   WALL AREA (sticky notes live here)
+───────────────────────────────────────── */
+.wall-area {
   position: absolute;
-  top: 5%;
-  right: 5%;
-  width: 40%;
-  height: 53%;
-  background-color: #C1A27C;
-  border: 11px solid #90745D;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 80%;
 }
 
+/* ─────────────────────────────────────────
+   BULLETIN BOARD
+───────────────────────────────────────── */
+.bulletin-board {
+  position: absolute;
+  top: 3%;
+  left: 50%;
+  width: min(80%, 800px);
+  height: 53%;
+  transform: translateX(-50%);
+  background-color: #C1A27C;
+  border: 11px solid #90745D;
+  border-radius: 4px;
+  /* 3x6 grid inside */
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(6, 1fr);
+  gap: 8px;
+  padding: 12px;
+}
+
+.bulletin-board.drag-over {
+  outline: 3px dashed #90745D;
+  outline-offset: -6px;
+}
+
+.board-slot {
+  border-radius: 6px;
+  background: rgba(0,0,0,0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.board-slot.occupied {
+  background: transparent;
+}
+
+/* ─────────────────────────────────────────
+   DESK
+───────────────────────────────────────── */
 .desk {
   position: absolute;
   bottom: 0;
@@ -42,13 +93,15 @@ html, body, #root {
   gap: 60px;
 }
 
+/* ─────────────────────────────────────────
+   DESK DECORATIONS
+───────────────────────────────────────── */
 .deco {
   object-fit: contain;
   flex-shrink: 0;
 }
 
-
-.shelf         { 
+.shelf {
   position: absolute;
   left: 10%;
   transform: translateX(-20%);
@@ -56,22 +109,23 @@ html, body, #root {
   height: 160%;
 }
 
-.pencil-holder { 
+.pencil-holder {
   position: absolute;
   left: 3%;
-  transform: translateX(-50%);  /* Center the element horizontally */
+  transform: translateX(-50%);
   bottom: 30%;
   height: 175%;
 }
 
-.plant         { 
+.plant {
   position: absolute;
   right: 25%;
   transform: translateX(50%) scaleX(-1);
   bottom: 36%;
   height: 180%;
 }
-.cat           { 
+
+.cat {
   position: absolute;
   right: 12%;
   transform: translateX(50%);
@@ -88,13 +142,122 @@ html, body, #root {
   cursor: pointer;
 }
 
+.note-stack:hover {
+  transform: translateX(-50%) scale(1.05);
+  transition: transform 0.15s ease;
+}
+
+/* ─────────────────────────────────────────
+   STICKY NOTE ON WALL
+───────────────────────────────────────── */
+.sticky-note {
+  border-radius: 8px;
+  cursor: grab;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  box-sizing: border-box;
+  z-index: 10;
+  transition: box-shadow 0.15s ease;
+}
+
+.sticky-note:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+.sticky-note.dragging {
+  cursor: grabbing;
+  z-index: 50;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+}
+
+.sticky-note.deleting {
+  animation: fadeOut 0.3s ease forwards;
+}
+
+@keyframes fadeOut {
+  0%   { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.7) rotate(-5deg); }
+}
+
+.sticky-title {
+  font-weight: 800;
+  font-size: 14px;
+  text-align: center;
+  color: #333;
+  margin-bottom: 8px;
+  word-break: break-word;
+}
+
+.sticky-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.sticky-task-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.sticky-checkbox {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 2px solid rgba(0,0,0,0.3);
+  background: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin-top: 2px;
+}
+
+.sticky-checkbox.checked {
+  background: rgba(0,0,0,0.15);
+}
+
+.sticky-task-text {
+  font-size: 12px;
+  color: #333;
+  word-break: break-word;
+  flex: 1;
+  line-height: 1.4;
+}
+
+.sticky-task-row.completed .sticky-task-text {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+
+.resize-handle {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  background: rgba(0,0,0,0.1);
+  border-radius: 3px;
+}
+
+/* ─────────────────────────────────────────
+   MODAL OVERLAY
+───────────────────────────────────────── */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0,0,0,0.4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -109,10 +272,12 @@ html, body, #root {
   flex-direction: row;
   align-items: flex-start;
   gap: 48px;
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.2);
 }
 
-/* LEFT */
+/* ─────────────────────────────────────────
+   MODAL LEFT (color picker)
+───────────────────────────────────────── */
 .modal-left {
   display: flex;
   flex-direction: column;
@@ -144,13 +309,21 @@ html, body, #root {
   border-radius: 50%;
   border: 4px solid transparent;
   cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.color-btn:hover {
+  transform: scale(1.1);
 }
 
 .color-btn.selected {
-  border-color: #333;
+  border-width: 4px;
+  transform: scale(1.1);
 }
 
-/* CENTER */
+/* ─────────────────────────────────────────
+   MODAL CENTER (note preview)
+───────────────────────────────────────── */
 .modal-center {
   display: flex;
   flex-direction: column;
@@ -162,42 +335,81 @@ html, body, #root {
   width: 220px;
   height: 380px;
   border-radius: 8px;
-  border: 4px solid rgba(0,0,0,0.15);
-  padding: 20px;
+  border: 4px solid;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
+  overflow: hidden;
 }
 
 .modal-title-input {
   background: none;
   border: none;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 800;
   width: 100%;
   outline: none;
   text-align: center;
   color: #333;
+  font-family: 'Jua', sans-serif;
 }
 
-.preview-task-row {
+.modal-title-input::placeholder {
+  color: rgba(0,0,0,0.25);
+}
+
+.modal-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.task-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
-.preview-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  border: 2px solid rgba(0,0,0,0.3);
+.task-checkbox {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 2px solid rgba(0,0,0,0.25);
   flex-shrink: 0;
 }
 
-.preview-line {
+.task-input {
   flex: 1;
-  height: 2px;
-  background: rgba(0,0,0,0.15);
+  border: none;
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+  outline: none;
+  font-size: 13px;
+  color: #333;
+  background: transparent;
+  padding: 2px 0;
+  font-family: 'Jua', sans-serif;
+}
+
+.task-input::placeholder {
+  color: rgba(0,0,0,0.25);
+  font-style: italic;
+}
+
+.task-trash {
+  background: none;
+  border: none;
+  color: #e00;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px;
+  opacity: 0.6;
+}
+
+.task-trash:hover {
+  opacity: 1;
 }
 
 .modal-done {
@@ -210,73 +422,19 @@ html, body, #root {
   font-size: 16px;
   font-weight: 800;
   letter-spacing: 1px;
+  font-family: 'Jua', sans-serif;
+  transition: 0.15s ease;
 }
 
 .modal-done:hover {
   background: #bbb;
 }
 
-/* RIGHT */
+/* ─────────────────────────────────────────
+   MODAL RIGHT (status)
+───────────────────────────────────────── */
 .modal-right {
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-
-.style-row, .status-row {
-  display: flex;
-  gap: 16px;
-  margin-top: 8px;
-}
-
-.style-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 50%;
-}
-
-.style-btn.selected .style-circle {
-  outline: 3px solid #333;
-  outline-offset: 3px;
-}
-
-.style-circle {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  border: 3px solid rgba(0,0,0,0.2);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 12px;
-}
-
-.mini-line {
-  width: 100%;
-  height: 2px;
-  background: rgba(0,0,0,0.25);
-  border-radius: 1px;
-}
-
-.status-btn {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  border: 3px solid #E0BD3F;
-  background: none;
-  cursor: pointer;
-  font-size: 20px;
-  color: #E0BD3F;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.status-btn.selected {
-  background: rgba(224,189,63,0.15);
-  border-width: 4px;
 }

@@ -3,106 +3,108 @@ import { useState } from "react"
 function NoteModal({ onClose, onCreate }) {
   const [title, setTitle] = useState("")
   const [color, setColor] = useState("yellow")
-  const [style, setStyle] = useState("plain")
-  const [status, setStatus] = useState("empty")
+  const [tasks, setTasks] = useState([{ text: "", completed: false }])
 
   const colors = {
-    yellow: "#FFEAAD",
-    pink:   "#FFD6E7",
-    blue:   "#C3ECF6",
-    green:  "#D2FFCE"
+    yellow: { bg: "#FFEAAD", border: "#E0BD3F" },
+    pink:   { bg: "#FFD6E7", border: "#FB83DD" },
+    blue:   { bg: "#C3ECF6", border: "#7BC9DD" },
+    green:  { bg: "#D2FFCE", border: "#80C27A" },
+  }
+
+  function updateTask(index, text) {
+    const updated = [...tasks]
+    updated[index].text = text
+    if (index === tasks.length - 1 && text.length > 0) {
+      updated.push({ text: "", completed: false })
+    }
+    setTasks(updated)
+  }
+
+  function deleteTask(index) {
+    if (tasks.length === 1) {
+      setTasks([{ text: "", completed: false }])
+      return
+    }
+    setTasks(tasks.filter((_, i) => i !== index))
   }
 
   function handleCreate() {
-    onCreate({ title, color, style, status, tasks: [] })
+    const hasTitle = title.trim().length > 0
+    const hasTasks = tasks.some(t => t.text.trim().length > 0)
+    if (!hasTitle && !hasTasks) return
+    onCreate({
+      title: title.trim(),
+      color,
+      tasks: tasks.filter(t => t.text.trim().length > 0)
+    })
     onClose()
   }
 
-  return (
-    <div className="modal-overlay">
-      <div className="modal">
+  const { bg, border } = colors[color]
 
-        {/* LEFT — Color picker */}
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+
+        {/* LEFT — Color */}
         <div className="modal-left">
           <span className="modal-label">COLOR</span>
           <div className="color-grid">
-            {Object.entries(colors).map(([name, hex]) => (
+            {Object.entries(colors).map(([name, { bg: bgc, border: bdc }]) => (
               <button
                 key={name}
                 className={`color-btn ${color === name ? "selected" : ""}`}
-                style={{ backgroundColor: hex, borderColor: hex === "#FFEAAD" ? "#E0BD3F" : hex === "#FFD6E7" ? "#FB83DD" : hex === "#C3ECF6" ? "#7BC9DD" : "#80C27A" }}
+                style={{ backgroundColor: bgc, borderColor: color === name ? bdc : "transparent" }}
                 onClick={() => setColor(name)}
               />
             ))}
           </div>
         </div>
 
-        {/* CENTER — Note preview */}
+        {/* CENTER — Preview */}
         <div className="modal-center">
-          <div
-            className={`modal-note-preview ${style === "lined" ? "lined" : ""}`}
-            style={{ backgroundColor: colors[color] }}
-          >
+          <div className="modal-note-preview" style={{ backgroundColor: bg, borderColor: border }}>
+            
             <input
               className="modal-title-input"
               placeholder="TITLE"
               value={title}
               onChange={e => setTitle(e.target.value)}
             />
-            {style === "lined" && (
-              <>
-                <div className="preview-task-row">
-                  <div className="preview-dot" />
-                  <div className="preview-line" />
+
+            <div className="modal-tasks">
+              {tasks.map((task, i) => (
+                <div key={i} className="task-row">
+                  <div className="task-checkbox" />
+                  <input
+                    className="task-input"
+                    placeholder="click to add a task..."
+                    value={task.text}
+                    onChange={e => updateTask(i, e.target.value)}
+                  />
+                  {task.text.length > 0 && (
+                    <button className="task-trash" onClick={() => deleteTask(i)}>✕</button>
+                  )}
                 </div>
-                <div className="preview-task-row">
-                  <div className="preview-dot" />
-                  <div className="preview-line" />
-                </div>
-              </>
-            )}
+              ))}
+            </div>
+
           </div>
 
-          {/* Done button */}
           <button className="modal-done" onClick={handleCreate}>DONE</button>
         </div>
 
-        {/* RIGHT — Style + Status */}
+        {/* RIGHT — Status only now */}
         <div className="modal-right">
-          <span className="modal-label">STYLE</span>
-          <div className="style-row">
-            <button
-              className={`style-btn ${style === "plain" ? "selected" : ""}`}
-              onClick={() => setStyle("plain")}
-            >
-              <div className="style-circle plain" style={{ backgroundColor: colors[color] }} />
-            </button>
-            <button
-              className={`style-btn ${style === "lined" ? "selected" : ""}`}
-              onClick={() => setStyle("lined")}
-            >
-              <div className="style-circle lined-preview" style={{ backgroundColor: colors[color] }}>
-                <div className="mini-line" />
-                <div className="mini-line" />
-                <div className="mini-line" />
-              </div>
-            </button>
-          </div>
-
-          <span className="modal-label" style={{ marginTop: "32px" }}>STATUS</span>
-          <div className="status-row">
-            <button
-              className={`status-btn ${status === "empty" ? "selected" : ""}`}
-              onClick={() => setStatus("empty")}
-            >○</button>
-            <button
-              className={`status-btn ${status === "in-progress" ? "selected" : ""}`}
-              onClick={() => setStatus("in-progress")}
-            >◎</button>
-            <button
-              className={`status-btn ${status === "done" ? "selected" : ""}`}
-              onClick={() => setStatus("done")}
-            >✓</button>
+          <span className="modal-label">STATUS</span>
+          <div className="status-info">
+            <div className="status-example">
+              <div className="task-checkbox" /> <span>Not done</span>
+            </div>
+            <div className="status-example">
+              <div className="task-checkbox checked">✓</div> <span>Done</span>
+            </div>
           </div>
         </div>
 

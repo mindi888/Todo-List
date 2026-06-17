@@ -1,90 +1,127 @@
-import { useState } from "react"
-import emptyNote from "../assets/empty-note.svg" 
-import linedNote from "../assets/lined-note.svg" 
+import { useState, useRef } from "react"
 
-function StickyNote({ note, onUpdate }) {
+function StickyNote({ note, onUpdate, onClick }) {
   const [isDragging, setIsDragging] = useState(false)
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
+  const dragStart = useRef({ x: 0, y: 0 })
 
-  // Condition: Use lined SVG if tasks array has items, otherwise use blank SVG
-  const stickyAsset = note.tasks && note.tasks.length > 0 ? linedNote : emptyNote
+  const colors = {
+    yellow: { bg: "#FFEAAD", border: "#E0BD3F" },
+    pink:   { bg: "#FFD6E7", border: "#FB83DD" },
+    blue:   { bg: "#C3ECF6", border: "#7BC9DD" },
+    green:  { bg: "#D2FFCE", border: "#80C27A" },
+  }
 
-  // DRAG LOGIC: Mouse down starts tracking positions
-  const handleMouseDown = (e) => {
-    if (e.target.classList.contains("resize-handle")) return // Don't drag if pulling corner
+  const { bg, border } = colors[note.color] || colors.yellow
+
+  // DRAG
+  function handleMouseDown(e) {
+    if (e.target.classList.contains("resize-handle")) return
+    e.preventDefault()
+    dragStart.current = {
+      x: e.clientX - note.x,
+      y: e.clientY - note.y
+    }
     setIsDragging(true)
-    setDragStart({ x: e.clientX - note.x, y: e.clientY - note.y })
+
+    function onMove(e) {
+      onUpdate({ x: e.clientX - dragStart.current.x, y: e.clientY - dragStart.current.y })
+    }
+    function onUp() {
+      setIsDragging(false)
+      window.removeEventListener("mousemove", onMove)
+      window.removeEventListener("mouseup", onUp)
+    }
+    window.addEventListener("mousemove", onMove)
+    window.addEventListener("mouseup", onUp)
   }
 
-  // DRAG LOGIC: Moving mouse shifts coordinates on the wall
-  const handleMouseMove = (e) => {
-    if (!isDragging) return
-    onUpdate({
-      x: e.clientX - dragStart.x,
-      y: e.clientY - dragStart.y
-    })
+  // RESIZE
+  function handleResizeDown(e) {
+    e.stopPropagation()
+    e.preventDefault()
+    const startW = note.width
+    const startH = note.height
+    const startX = e.clientX
+    const startY = e.clientY
+
+    function onMove(e) {
+      onUpdate({
+        width: Math.max(160, Math.min(320, startW + e.clientX - startX)),
+        height: Math.max(160, Math.min(320, startH + e.clientY - startY))
+      })
+    }
+    function onUp() {
+      window.removeEventListener("mousemove", onMove)
+      window.removeEventListener("mouseup", onUp)
+    }
+    window.addEventListener("mousemove", onMove)
+    window.addEventListener("mouseup", onUp)
   }
 
-  const handleMouseUp = () => {
-    setIsDragging(false)
+  // TOGGLE TASK COMPLETE
+  function toggleTask(index) {
+    let rawTasks = note.tasks;
+    if (typeof rawTasks === "string") {
+      try { rawTasks = JSON.parse(rawTasks); } catch { rawTasks = []; }
+    }
+    const safeTasks = Array.isArray(rawTasks) ? rawTasks : [];
+    
+    const updated = [...safeTasks];
+    if (updated[index]) {
+      updated[index] = { ...updated[index], completed: !updated[index].completed };
+      onUpdate({ tasks: updated });
+    }
   }
 
   return (
-    <div 
-      className="visual-sticky-note"
+    <div
+      className={`sticky-note ${isDragging ? "dragging" : ""}`}
       style={{
         position: "absolute",
-        left: `${note.x}px`,
-        top: `${note.y}px`,
-        width: `${note.width}px`,
-        height: `${note.height}px`,
-        // Maps color names to your design HEX codes
-        backgroundColor: note.color === "yellow" ? "#FFEAAD" : note.color === "pink" ? "#FFD6E7" : note.color === "blue" ? "#C3ECF6" : "#D2FFCE"
+        left: note.x,
+        top: note.y,
+        width: note.width || 160,
+        height: note.height || 160,
+        backgroundColor: bg,
+        border: `4px solid ${border}`,
       }}
       onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
+      onClick={onClick}
     >
-      {/* Background Figma Graphic Layer */}
-      <img src={stickyAsset} className="sticky-base-svg" alt="" draggable="false" />
-      
-      {/* Title Text Overlap Layer */}
-      <div className="sticky-content">
-        <h4>{note.title || "Untitled"}</h4>
+      {/* Title */}
+      <div className="sticky-title">{note.title || "Untitled"}</div>
+
+      {/* Tasks */}
+      <div className="sticky-tasks">
+        {(() => {
+          // 1. Force the tasks value to safely convert into an array
+          let rawTasks = note.tasks;
+          if (typeof rawTasks === "string") {
+            try { rawTasks = JSON.parse(rawTasks); } catch { rawTasks = []; }
+          }
+          const safeTasks = Array.isArray(rawTasks) ? rawTasks : [];
+
+          // 2. Map over our verified array item list safely
+          return safeTasks.map((task, i) => (
+            <div key={i} className={`sticky-task-row ${task?.completed ? "completed" : ""}`}>
+              <button 
+                className={`sticky-checkbox ${task?.completed ? "checked" : ""}`} 
+                onClick={e => { 
+                  e.stopPropagation(); 
+                  toggleTask(i);
+                }} 
+              >
+                {task?.completed ? "✓" : ""}
+              </button>
+              <span className="sticky-task-text">{task?.text || ""}</span>
+            </div>
+          ));
+        })()}
       </div>
 
-      {/* Invisible Resize Corner Handle */}
-      <div 
-        className="resize-handle"
-        onMouseDown={(e) => {
-          e.stopPropagation() // Prevents triggering container drag actions
-          const startWidth = note.width
-          const startHeight = note.height
-          const startX = e.clientX
-          const startY = e.clientY
 
-          const MIN_WIDTH = 160
-          const MIN_HEIGHT = 160
-          const MAX_WIDTH = 400 
-          const MAX_HEIGHT = 400
-
-          const doResize = (moveEvent) => {
-            onUpdate({
-              width: Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, startWidth + (moveEvent.clientX - startX))),
-              height: Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, startHeight + (moveEvent.clientY - startY)))
-            })
-          }
-
-          const stopResize = () => {
-            window.removeEventListener("mousemove", doResize)
-            window.removeEventListener("mouseup", stopResize)
-          }
-
-          window.addEventListener("mousemove", doResize)
-          window.addEventListener("mouseup", stopResize)
-        }}
-      />
+      {/* Resize handle */}
+      <div className="resize-handle" onMouseDown={handleResizeDown} />
     </div>
   )
 }
