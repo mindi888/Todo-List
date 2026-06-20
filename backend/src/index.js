@@ -15,12 +15,21 @@ async function init() {
       id SERIAL PRIMARY KEY,
       title TEXT NOT NULL,
       completed BOOLEAN DEFAULT false,
+      color TEXT DEFAULT 'yellow',
+      status TEXT DEFAULT 'empty',
+      tasks TEXT DEFAULT '[]',
+      x INTEGER DEFAULT 100,
+      y INTEGER DEFAULT 100,
+      width INTEGER DEFAULT 160,
+      height INTEGER DEFAULT 160,
       created_at TIMESTAMP DEFAULT NOW()
     )
   `);
+
   app.listen(process.env.PORT, () => {
     console.log(`Server running on port ${process.env.PORT}`);
   });
 }
+
 
 init();

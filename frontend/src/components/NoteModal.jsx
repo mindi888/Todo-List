@@ -1,9 +1,13 @@
 import { useState } from "react"
 
-function NoteModal({ onClose, onCreate }) {
-  const [title, setTitle] = useState("")
-  const [color, setColor] = useState("yellow")
-  const [tasks, setTasks] = useState([{ text: "", completed: false }])
+function NoteModal({ onClose, onCreate, initialNote }) {
+  const [title, setTitle] = useState(initialNote?.title || "")
+  const [color, setColor] = useState(initialNote?.color || "yellow")
+  const [tasks, setTasks] = useState(() => {
+    let t = initialNote?.tasks || []
+    if (typeof t === "string") { try { t = JSON.parse(t) } catch { t = [] } }
+    return [...t, { text: "", completed: false }]
+  })
 
   const colors = {
     yellow: { bg: "#FFEAAD", border: "#E0BD3F" },
@@ -21,6 +25,12 @@ function NoteModal({ onClose, onCreate }) {
     setTasks(updated)
   }
 
+  function toggleTask(index) {
+    const updated = [...tasks]
+    updated[index] = { ...updated[index], completed: !updated[index].completed }
+    setTasks(updated)
+  }
+
   function deleteTask(index) {
     if (tasks.length === 1) {
       setTasks([{ text: "", completed: false }])
@@ -29,15 +39,14 @@ function NoteModal({ onClose, onCreate }) {
     setTasks(tasks.filter((_, i) => i !== index))
   }
 
-  function handleCreate() {
+  function handleDone() {
+    const cleanTasks = tasks.filter(t => t.text.trim().length > 0)
     const hasTitle = title.trim().length > 0
-    const hasTasks = tasks.some(t => t.text.trim().length > 0)
-    if (!hasTitle && !hasTasks) return
-    onCreate({
-      title: title.trim(),
-      color,
-      tasks: tasks.filter(t => t.text.trim().length > 0)
-    })
+    const hasTasks = cleanTasks.length > 0
+    // Always close — only create/update if there's content
+    if (hasTitle || hasTasks) {
+      onCreate({ title: title.trim(), color, tasks: cleanTasks })
+    }
     onClose()
   }
 
@@ -55,7 +64,12 @@ function NoteModal({ onClose, onCreate }) {
               <button
                 key={name}
                 className={`color-btn ${color === name ? "selected" : ""}`}
-                style={{ backgroundColor: bgc, borderColor: color === name ? bdc : "transparent" }}
+                style={{ 
+                  backgroundColor: bgc,
+                  boxShadow: `inset 0 0 0 3px ${bdc}`,  // inner ring shows border color
+                  outline: color === name ? "3px solid #8f6346ff" : "3px solid transparent",
+                  outlineOffset: "3px"
+                }}
                 onClick={() => setColor(name)}
               />
             ))}
@@ -65,23 +79,27 @@ function NoteModal({ onClose, onCreate }) {
         {/* CENTER — Preview */}
         <div className="modal-center">
           <div className="modal-note-preview" style={{ backgroundColor: bg, borderColor: border }}>
-            
             <input
               className="modal-title-input"
-              placeholder="TITLE"
+              placeholder="UNTITLED"
               value={title}
               onChange={e => setTitle(e.target.value)}
             />
-
             <div className="modal-tasks">
               {tasks.map((task, i) => (
-                <div key={i} className="task-row">
-                  <div className="task-checkbox" />
+                <div key={i} className={`task-row ${task.completed ? "task-completed" : ""}`}>
+                  <button
+                    className={`task-checkbox-btn ${task.completed ? "checked" : ""}`}
+                    onClick={() => toggleTask(i)}
+                  >
+                    {task.completed ? "✓" : ""}
+                  </button>
                   <input
                     className="task-input"
                     placeholder="click to add a task..."
                     value={task.text}
                     onChange={e => updateTask(i, e.target.value)}
+                    style={{ textDecoration: task.completed ? "line-through" : "none", opacity: task.completed ? 0.5 : 1 }}
                   />
                   {task.text.length > 0 && (
                     <button className="task-trash" onClick={() => deleteTask(i)}>✕</button>
@@ -89,25 +107,12 @@ function NoteModal({ onClose, onCreate }) {
                 </div>
               ))}
             </div>
-
           </div>
 
-          <button className="modal-done" onClick={handleCreate}>DONE</button>
+          <button className="modal-done" onClick={handleDone}>
+            {initialNote ? "SAVE" : "DONE"}
+          </button>
         </div>
-
-        {/* RIGHT — Status only now */}
-        <div className="modal-right">
-          <span className="modal-label">STATUS</span>
-          <div className="status-info">
-            <div className="status-example">
-              <div className="task-checkbox" /> <span>Not done</span>
-            </div>
-            <div className="status-example">
-              <div className="task-checkbox checked">✓</div> <span>Done</span>
-            </div>
-          </div>
-        </div>
-
       </div>
     </div>
   )

@@ -3,7 +3,6 @@ CREATE TABLE IF NOT EXISTS todos (
   title TEXT NOT NULL,
   completed BOOLEAN DEFAULT false,
   color TEXT DEFAULT 'yellow',
-  style TEXT DEFAULT 'plain',
   status TEXT DEFAULT 'empty',
   tasks TEXT DEFAULT '[]',
   x INTEGER DEFAULT 100,
