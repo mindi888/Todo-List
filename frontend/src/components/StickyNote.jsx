@@ -29,22 +29,36 @@ function StickyNote({ note, onUpdate, onClick, boardRef, onDragOffBoard }) {
     e.preventDefault()
     e.stopPropagation()
 
+    if (!boardRef.current) return
+    const rect = boardRef.current.getBoundingClientRect()
+    
+    // Convert current percentage back to pixels to anchor the dragging start point smoothly
+    const currentPixelX = (note.x / 100) * rect.width
+    const currentPixelY = (note.y / 100) * rect.height
+
     const startX = e.clientX
     const startY = e.clientY
     didDrag.current = false
-
-    dragStart.current = {
-      x: e.clientX - note.x,
-      y: e.clientY - note.y
-    }
+    dragStart.current = { x: e.clientX - currentPixelX, y: e.clientY - currentPixelY }
+    
 
     function onMove(e) {
       const dx = Math.abs(e.clientX - startX)
       const dy = Math.abs(e.clientY - startY)
-      if (dx > 4 || dy > 4) didDrag.current = true
+      if (dx > 4 || dy > 4) {
+        didDrag.current = true
+        setIsDragging(true)
+      }
 
-      setIsDragging(true)
-      onUpdate({ x: e.clientX - dragStart.current.x, y: e.clientY - dragStart.current.y })
+      // Compute clean target pixel coordinates relative to the board bounds
+      const targetPixelX = e.clientX - dragStart.current.x
+      const targetPixelY = e.clientY - dragStart.current.y
+
+      // Pass the RAW board pixels directly up to App.jsx to handle percentage mapping safely
+      onUpdate({ 
+        x: targetPixelX, 
+        y: targetPixelY 
+      })
       setOffBoard(!isInsideBoard(e.clientX, e.clientY))
     }
 
@@ -71,18 +85,31 @@ function StickyNote({ note, onUpdate, onClick, boardRef, onDragOffBoard }) {
   function handleResizeDown(e) {
     e.stopPropagation()
     e.preventDefault()
-    didDrag.current = true  // prevent click firing after resize
-    const startW = note.width
-    const startH = note.height
+    didDrag.current = true
+
+    if (!boardRef.current) return
+    const rect = boardRef.current.getBoundingClientRect()
+
+    // Convert current percentages back to raw pixels for active tracking
+    const currentPixelW = (note.width / 100) * rect.width
+    const currentPixelH = (note.height / 100) * rect.height
+
+    const startW = currentPixelW
+    const startH = currentPixelH
     const startX = e.clientX
     const startY = e.clientY
 
     function onMove(e) {
-      onUpdate({
-        width: Math.max(160, Math.min(320, startW + e.clientX - startX)),
-        height: Math.max(160, Math.min(320, startH + e.clientY - startY))
-      })
+      onUpdate({ 
+      width: startW + e.clientX - startX, 
+      height: startH + e.clientY - startY 
+    })
+      // onUpdate({
+      //   width: Math.max(160, Math.min(320, startW + e.clientX - startX)),
+      //   height: Math.max(160, Math.min(320, startH + e.clientY - startY))
+      // })
     }
+
     function onUp() {
       window.removeEventListener("mousemove", onMove)
       window.removeEventListener("mouseup", onUp)
@@ -106,51 +133,53 @@ function StickyNote({ note, onUpdate, onClick, boardRef, onDragOffBoard }) {
 
   let rawTasks = note.tasks
   if (typeof rawTasks === "string") {
-    try { rawTasks = JSON.parse(rawTasks) } catch { rawTasks = [] }
+    try {
+      rawTasks = JSON.parse(rawTasks)
+    } catch {
+      rawTasks = []
+    }
   }
   const safeTasks = Array.isArray(rawTasks) ? rawTasks : []
 
   return (
-    <>
-      <div
-        className={`sticky-note ${isDragging ? "dragging" : ""} ${note.deleting ? "deleting" : ""}`}
-        style={{
-          position: "absolute",
-          left: note.x,
-          top: note.y,
-          width: note.width || 160,
-          height: note.height || 160,
-          backgroundColor: bg,
-          border: `4px solid ${border}`,
-        }}
-        onMouseDown={handleMouseDown}
-        onClick={handleClick}
-      >
-        <div className="sticky-title">{note.title || "Untitled"}</div>
-
-        <div className="sticky-tasks">
-          {safeTasks.map((task, i) => (
-            <div key={i} className={`sticky-task-row ${task?.completed ? "completed" : ""}`}>
-              <button
-                className={`sticky-checkbox ${task?.completed ? "checked" : ""}`}
-                onClick={e => toggleTask(i, e)}
-              >
-                {task?.completed ? "✓" : ""}
-              </button>
-              <span className="sticky-task-text">{task?.text || ""}</span>
-            </div>
-          ))}
-        </div>
-
-        <div className="resize-handle" onMouseDown={handleResizeDown} />
-
-        {/* Trash shows on the note itself when dragged off board */}
-        {offBoard && (
-          <div className="note-trash-overlay">🗑️</div>
-        )}
+    <div 
+      className={`sticky-note ${isDragging ? "dragging" : ""} ${note.deleting ? "deleting" : ""}`}
+      style={{
+        position: "absolute",
+        left: `${note.x}%`,
+        top: `${note.y}%`,
+        width: `${note.width || 15}%`,
+        height: `${note.height || 15}%`,
+        backgroundColor: bg,
+        border: `4px solid ${border}`,
+      }}
+      onMouseDown={handleMouseDown}
+      onClick={handleClick}
+    >
+      <div className="sticky-title">{note.title || "Untitled"}</div>
+      
+      <div className="sticky-tasks">
+        {safeTasks.map((task, i) => (
+          <div key={i} className={`sticky-task-row ${task?.completed ? "completed" : ""}`}>
+            <button 
+              className={`sticky-checkbox ${task?.completed ? "checked" : ""}`} 
+              onClick={e => toggleTask(i, e)}
+            >
+              {task?.completed ? "✓" : ""}
+            </button>
+            <span className="sticky-task-text">{task?.text || ""}</span>
+          </div>
+        ))}
       </div>
-    </>
+      
+      <div className="resize-handle" onMouseDown={handleResizeDown} />
+
+      {/* FIXED: Replaced raw encoded string text with clean emoji spacing */}
+      {offBoard && (
+        <div className="note-trash-overlay">🗑️</div>
+      )}
+    </div>
   )
 }
 
-export default StickyNote
+export default StickyNote;

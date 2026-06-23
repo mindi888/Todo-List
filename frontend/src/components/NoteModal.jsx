@@ -94,15 +94,55 @@ function NoteModal({ onClose, onCreate, initialNote }) {
                   >
                     {task.completed ? "✓" : ""}
                   </button>
-                  <input
-                    className="task-input"
+                  
+                  <textarea
+                    className="task-textarea"
                     placeholder="click to add a task..."
+                    rows={1}
                     value={task.text}
-                    onChange={e => updateTask(i, e.target.value)}
-                    style={{ textDecoration: task.completed ? "line-through" : "none", opacity: task.completed ? 0.5 : 1 }}
+                    onChange={e => {
+                      updateTask(i, e.target.value);
+                      // Auto-adjusts height to grow downwards dynamically as you type
+                      e.target.style.height = "auto";
+                      e.target.style.height = e.target.scrollHeight + "px";
+                    }}
+                    onInput={e => {
+                      // Keeps height synchronized if content shrinks or expands quickly
+                      e.target.style.height = "auto";
+                      e.target.style.height = e.target.scrollHeight + "px";
+                    }}
+                    style={{ 
+                      textDecoration: task.completed ? "line-through" : "none", 
+                      opacity: task.completed ? 0.5 : 1
+                    }}
                   />
+
                   {task.text.length > 0 && (
-                    <button className="task-trash" onClick={() => deleteTask(i)}>✕</button>
+                    <button 
+                      className="task-trash" 
+                      title="Delete task"
+                      onClick={() => deleteTask(i)}
+                      >
+                        ❌
+                      </button>
+                  )}
+
+                  {/* ADD THE GOOGLE CALENDAR BUTTON DIRECTLY TO THE RIGHT OF THE DELETE BUTTON */}
+                  {task.text.trim().length > 0 && !task.completed && (
+                    <button
+                      className="modal-cal-btn"
+                      title="Add task to Google Calendar"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        const modalTitle = title.trim()
+                        const eventTitle = encodeURIComponent(modalTitle ? `${modalTitle}: ${task.text.trim()}` : task.text.trim())
+                        const details = encodeURIComponent("Added from your custom Bulletin Board workspace application.")
+                        const calendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${eventTitle}&details=${details}`
+                        window.open(calendarUrl, '_blank')
+                      }}
+                    >
+                      📅
+                    </button>
                   )}
                 </div>
               ))}

@@ -44,20 +44,47 @@ router.post('/', async (req, res) => {
 // 3. PUT (Update layout coordinates during drag or resize)
 router.put('/:id', async (req, res) => {
   const { id } = req.params;
-  const { title, color, status, tasks, x, y, width, height } = req.body;
-  
+  const body = req.body || {};
+  const { title, color, status, tasks, x, y, width, height } = body;
+
   try {
     const result = await pool.query(
       `UPDATE todos 
-       SET title = $1, color = $2, status = $3, tasks = $4, x = $5, y = $6, width = $7, height = $8 
-       WHERE id = $9 RETURNING *`,
-      [title, color, status, JSON.stringify(tasks), x, y, width, height, id]
+       SET title = COALESCE($1, title), 
+           color = COALESCE($2, color), 
+           status = COALESCE($3, status), 
+           tasks = COALESCE($4, tasks), 
+           x = COALESCE($5, x), 
+           y = COALESCE($6, y), 
+           width = COALESCE($7, width), 
+           height = COALESCE($8, height) 
+       WHERE id = $9 
+       RETURNING *`,
+      [
+        title !== undefined ? title : null,
+        color !== undefined ? color : null,
+        status !== undefined ? status : null,
+        tasks !== undefined ? JSON.stringify(tasks) : null, // 👈 Fixes the stringify undefined crash!
+        x !== undefined ? parseFloat(x) : null,             // 👈 Safely reads responsive decimals
+        y !== undefined ? parseFloat(y) : null,
+        width !== undefined ? parseFloat(width) : null,
+        height !== undefined ? parseFloat(height) : null,
+        id
+      ]
     );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Sticky note not found." });
+    }
+
+    // Return the updated row
     res.json(result.rows[0]);
   } catch (err) {
+    console.error("🚨 DATABASE PUT ERROR:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
+
 
 // 4. DELETE A NOTE
 router.delete('/:id', async (req, res) => {

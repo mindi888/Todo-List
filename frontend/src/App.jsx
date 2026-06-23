@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import './App.css'
 import cat from "./assets/cat.svg"
 import shelf from "./assets/shelf.svg"
+import toto from "./assets/toto.svg"
 import plant from "./assets/plant.svg"
 import pencilHolder from "./assets/pencil-holder.svg"
 import noteStack from "./assets/note-stack.svg"
@@ -66,6 +67,14 @@ async function placePendingNote(e) {
     const x = e.clientX - rect.left - 80;
     const y = e.clientY - rect.top - 80;
 
+    // 2. Convert pixels to exact percentage coordinates (0 - 100)
+    const xPct = Math.max(0, Math.min(100, (x / rect.width) * 100))
+    const yPct = Math.max(0, Math.min(100, (y / rect.height) * 100))
+    
+    // Default size: notes take up roughly 15% of the board's width/height
+    const widthPct = 15 
+    const heightPct = 15
+
     try {
       const res = await fetch(API_BASE_URL + "/todos", {
         method: "POST",
@@ -78,23 +87,18 @@ async function placePendingNote(e) {
           color: pendingNote.color,
           tasks: pendingNote.tasks,
           status: "empty",
-          x: Math.round(x), // Force clear integer numbers
-          y: Math.round(y),
-          width: 160,
-          height: 160,
+          x: xPct,
+          y: yPct,
+          width: widthPct,
+          height: heightPct,
         })
       });
 
       if (!res.ok) {
         throw new Error(`Server responded with status ${res.status}`);
       }
-
       const saved = await res.json();
-      
-      // If the backend returns an array (result.rows), select the first item
-      const newSavedNote = Array.isArray(saved) ? saved[0] : saved;
-      
-      setNotes(prev => [...prev, newSavedNote]);
+      setNotes(prev => [...prev, saved]);
     } catch (err) {
       console.error("Failed to save note:", err);
       alert("Could not save the note to the server.");
@@ -104,13 +108,25 @@ async function placePendingNote(e) {
 }
 
   async function handleUpdateNote(id, updates) {
-    setNotes(prev => prev.map(n => n.id === id ? { ...n, ...updates } : n))
+    const board = boardRef.current
+    if (!board) return
+    const rect = board.getBoundingClientRect()
+
+    // Convert raw incoming drag/resize pixel updates into percentages on the fly
+    const pctUpdates = { ...updates }
+    if (updates.x !== undefined) pctUpdates.x = (updates.x / rect.width) * 100
+    if (updates.y !== undefined) pctUpdates.y = (updates.y / rect.height) * 100
+    if (updates.width !== undefined) pctUpdates.width = (updates.width / rect.width) * 100
+    if (updates.height !== undefined) pctUpdates.height = (updates.height / rect.height) * 100
+
+    // Update local state optimistically using percentages
+    setNotes(prev => prev.map(n => n.id === id ? { ...n, ...pctUpdates } : n))
+
     try {
-      const note = notes.find(n => n.id === id)
       await fetch(`${API_BASE_URL}/todos/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...note, ...updates })
+        body: JSON.stringify(pctUpdates)
       })
     } catch (err) {
       console.error("Failed to update note:", err)
@@ -195,6 +211,7 @@ async function placePendingNote(e) {
         <img src={shelf} className="deco shelf" alt="" />
         <img src={pencilHolder} className="deco pencil-holder" alt="" />
         <img src={plant} className="deco plant" alt="" />
+        <img src={toto} className="deco toto" alt="" />
         <img src={cat} className="deco cat" alt="" />
         <img
           src={noteStack}

@@ -51,12 +51,6 @@ html, body, #root {
   background-color: #C1A27C;
   border: 11px solid #90745D;
   border-radius: 4px;
-  /* 3x6 grid inside */
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(6, 1fr);
-  gap: 8px;
-  padding: 12px;
 }
 
 .bulletin-board.drag-over {
@@ -133,6 +127,14 @@ html, body, #root {
   height: 120%;
 }
 
+.toto {
+  position: absolute;
+  right: max(9.5%, 3%);
+  transform: translateX(70%);
+  bottom: 33%;
+  height: 300%;
+}
+
 .note-stack {
   position: absolute;
   left: 50%;
@@ -160,6 +162,11 @@ html, body, #root {
   box-sizing: border-box;
   z-index: 10;
   transition: box-shadow 0.15s ease;
+
+  min-width: 140px;  
+  min-height: 140px; 
+  max-width: 400px;  
+  max-height: 400px;
 }
 
 .sticky-note:hover {
@@ -290,7 +297,7 @@ html, body, #root {
   letter-spacing: 1px;
   color: #000000;
   display: block;
-  background: #f1c29c;
+  background: #e9d1bc;
   padding: 6px 16px;
   border-radius: 8px;
   text-align: center;
@@ -366,10 +373,29 @@ html, body, #root {
   overflow-y: auto;
 }
 
+/* Update your task row to align elements nicely to the top if text grows long */
 .task-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start; /* Aligns checkbox and trash icon to the top of long text */
   gap: 8px;
+  width: 100%;
+  margin-bottom: 6px;
+}
+
+/* Transform the task input box into a dynamic wrapping text block */
+.task-textarea {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-size: inherit;
+  resize: none; /* Disables the native resize grab-handle in the bottom right corner */
+  width: 100%;
+  padding: 2px 0;
+  overflow: hidden; /* Hides horizontal and vertical scrollbars */
+  word-wrap: break-word;
+  white-space: pre-wrap; /* Forces text to wrap onto the next line naturally */
 }
 
 .task-checkbox {
@@ -380,42 +406,55 @@ html, body, #root {
   flex-shrink: 0;
 }
 
-.task-input {
-  flex: 1;
-  border: none;
-  border-bottom: 1px solid rgba(0,0,0,0.1);
-  outline: none;
-  font-size: 13px;
-  color: #333;
-  background: transparent;
-  padding: 2px 0;
-  font-family: 'Jua', sans-serif;
-}
-
 .task-input::placeholder {
   color: rgba(0,0,0,0.25);
   font-style: italic;
 }
 
+.task-row {
+  display: flex;
+  align-items: center; /* Vertically aligns icons with your typed tasks line */
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 6px;
+}
+
+/* Base style for the modal delete button to maintain dimensions */
 .task-trash {
-  background: none;
+  background: transparent;
   border: none;
-  color: #e00;
   cursor: pointer;
-  font-size: 12px;
-  padding: 2px;
-  opacity: 0.6;
+  color: #ff5c5c;
+  font-size: 14px;
+  padding: 4px;
+  flex-shrink: 0;
+  transition: transform 0.1s ease-in-out;
 }
 
 .task-trash:hover {
-  opacity: 1;
+  transform: scale(1.15);
+}
+
+/* Style for the calendar button right next to it */
+.modal-cal-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px;
+  flex-shrink: 0;
+  transition: transform 0.1s ease-in-out;
+}
+
+.modal-cal-btn:hover {
+  transform: scale(1.15);
 }
 
 .modal-done {
   padding: 12px 48px;
   border-radius: 12px;
   border: none;
-  background: #b4e2a9;
+  background: rgb(226, 200, 179);
   color: #000000;
   cursor: pointer;
   font-size: 16px;
@@ -426,7 +465,7 @@ html, body, #root {
 }
 
 .modal-done:hover {
-  background: #97c893;
+  background: rgba(188, 162, 141, 0.808);
 }
 
 /* ─────────────────────────────────────────
@@ -459,12 +498,12 @@ html, body, #root {
   transform: translate(-50%, -50%);
   font-size: 32px;
   pointer-events: none;
-  animation: trashPop 0.15s ease;
+  animation: trashPop 0.5s ease;
 }
 
 @keyframes trashPop {
-  0%   { transform: translateX(-50%) scale(0.5); opacity: 0; }
-  100% { transform: translateX(-50%) scale(1); opacity: 1; }
+  0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
 }
 
 /* Rounded only bottom-right corner */
